@@ -1,3 +1,4 @@
+use anyhow::Error as AnyhowError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use thiserror::Error;
@@ -13,12 +14,12 @@ pub struct User {
 
 #[derive(Error, Debug)]
 pub enum UserError {
-    #[error("User with ID {0} not found")]
+    #[error("user with ID {0} not found")]
     NotFound(Uuid),
-    #[error("Username '{0}' already exists")]
+    #[error("username '{0}' already exists")]
     DuplicateUsername(String),
-    #[error("Unknown internal error: {0}")]
-    Unknown(String),
+    #[error("unknown user error")]
+    Unknown(#[from] AnyhowError),
 }
 
 // TODO: possible to avoid mut?

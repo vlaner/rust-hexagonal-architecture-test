@@ -1,3 +1,4 @@
+use anyhow::Error as AnyhowError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -14,13 +15,17 @@ pub struct AuditLog {
 
 #[derive(Error, Debug)]
 pub enum AuditError {
-    #[error("Unknown internal error: {0}")]
-    Unknown(String),
+    #[error("unknown audit error")]
+    Unknown(#[from] AnyhowError),
 }
 
 // TODO: possible to avoid mut?
 // sql transaction requires &mut, pool does not
 #[async_trait]
 pub trait AuditRepository: Send + Sync {
-    async fn log(&mut self, user_id: Uuid, action: &str) -> Result<AuditLog, AuditError>;
+    async fn log(
+        &mut self,
+        user_id: Uuid,
+        action: &str,
+    ) -> Result<AuditLog, AuditError>;
 }

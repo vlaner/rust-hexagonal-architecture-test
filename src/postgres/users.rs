@@ -54,7 +54,7 @@ where
     match row {
         Ok(r) => Ok(r.to_domain()),
         Err(sqlx::Error::RowNotFound) => Err(UserError::NotFound(id)),
-        Err(e) => Err(UserError::Unknown(e.to_string())),
+        Err(e) => Err(UserError::Unknown(e.into())),
     }
 }
 

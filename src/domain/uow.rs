@@ -1,11 +1,12 @@
 use crate::domain::{audit::AuditRepository, users::UserRepository};
+use anyhow::Error as AnyhowError;
 use async_trait::async_trait;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum UoWError {
-    #[error("unit of work error: {0}")]
-    Unknown(String),
+    #[error("unknown unit of work error")]
+    Unknown(#[from] AnyhowError),
 }
 
 #[async_trait]

@@ -54,7 +54,7 @@ where
 
     match result {
         Ok(row) => Ok(row.to_domain()),
-        Err(e) => Err(AuditError::Unknown(e.to_string())),
+        Err(e) => Err(AuditError::Unknown(e.into())),
     }
 }
 
