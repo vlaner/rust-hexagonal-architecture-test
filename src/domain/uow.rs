@@ -37,6 +37,7 @@ pub trait HasAuditRepo {
     fn audit(&mut self) -> impl AuditRepository + '_;
 }
 
+// 🙃 TODO: how
 #[async_trait]
 pub trait UnitOfWorkCallback: Send + Sync {
     type Tx: UnitOfWorkTransaction;
