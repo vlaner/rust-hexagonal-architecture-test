@@ -18,13 +18,13 @@ use sqlx::postgres::PgPoolOptions;
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
-use crate::domain::uow::UnitOfWork;
 use crate::error::{AppError, ErrorKind};
 use crate::postgres::uow::PostgresUnitOfWork;
 use crate::service::UserService;
+use crate::service::UserServiceApi;
 
 pub struct AppState {
-    pub user_service: Arc<UserService>,
+    pub user_service: Arc<dyn UserServiceApi>,
 }
 
 #[derive(Serialize)]
@@ -84,14 +84,11 @@ async fn index(
 
 pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
     tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                "rust_backend=debug,actix_web=info,tracing_actix_web=debug".into()
-            }),
-        )
+        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            "rust_backend=debug,actix_web=info,tracing_actix_web=debug,sqlx=debug".into()
+        }))
         .with_span_events(FmtSpan::CLOSE)
         .init();
-    tracing::info!("logging initialized");
 
     let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL is required")?;
     let pool = PgPoolOptions::new()
@@ -101,7 +98,7 @@ pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
         .await
         .context("connect to postgres")?;
 
-    let uow: Arc<dyn UnitOfWork> = Arc::new(PostgresUnitOfWork::new(pool.clone()));
+    let uow = Arc::new(PostgresUnitOfWork::new(pool.clone()));
     let user_service = Arc::new(UserService::new(uow));
     let app_state = web::Data::new(AppState { user_service });
 
