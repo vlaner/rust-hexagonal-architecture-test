@@ -2,9 +2,12 @@ use anyhow::Context;
 use async_trait::async_trait;
 use sqlx::{PgPool, Postgres, Transaction};
 
-use crate::domain::audit::AuditRepository;
 use crate::domain::uow::{UnitOfWork, UnitOfWorkTransaction, UoWError};
 use crate::domain::users::UserRepository;
+use crate::domain::{
+    audit::AuditRepository,
+    uow::{HasAuditRepo, HasUserRepo},
+};
 use crate::postgres::audit::PostgresAuditRepoTx;
 use crate::postgres::users::PostgresUserRepoTx;
 
@@ -20,7 +23,9 @@ impl PostgresUnitOfWork {
 
 #[async_trait]
 impl UnitOfWork for PostgresUnitOfWork {
-    async fn begin(&self) -> Result<Box<dyn UnitOfWorkTransaction>, UoWError> {
+    type Tx = PostgresUnitOfWorkTransaction;
+
+    async fn begin(&self) -> Result<Box<Self::Tx>, UoWError> {
         let tx = self
             .pool
             .begin()
@@ -35,22 +40,27 @@ pub struct PostgresUnitOfWorkTransaction {
     tx: Transaction<'static, Postgres>,
 }
 
-#[async_trait]
-impl UnitOfWorkTransaction for PostgresUnitOfWorkTransaction {
+impl HasUserRepo for PostgresUnitOfWorkTransaction {
     fn user(&mut self) -> Box<dyn UserRepository + '_> {
         Box::new(PostgresUserRepoTx::new(&mut self.tx))
     }
+}
 
+impl HasAuditRepo for PostgresUnitOfWorkTransaction {
     fn audit(&mut self) -> Box<dyn AuditRepository + '_> {
         Box::new(PostgresAuditRepoTx::new(&mut self.tx))
     }
+}
 
+#[async_trait]
+impl UnitOfWorkTransaction for PostgresUnitOfWorkTransaction {
     async fn commit(self: Box<Self>) -> Result<(), UoWError> {
         self.tx
             .commit()
             .await
             .context("commit unit of work")
             .map_err(UoWError::Commit)?;
+
         Ok(())
     }
 

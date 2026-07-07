@@ -1,17 +1,43 @@
+use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::domain::audit::AuditError;
 use crate::domain::uow::{UnitOfWork, UoWError};
 use crate::domain::users::{User, UserError};
+use crate::domain::{
+    audit::AuditError,
+    uow::{HasAuditRepo, HasUserRepo, UnitOfWorkTransaction},
+};
 use crate::error::AppError;
 
-pub struct UserService {
-    uow: Arc<dyn UnitOfWork>,
+#[async_trait]
+pub trait UserServiceApi: Send + Sync {
+    async fn get_user(&self, uid: Uuid) -> Result<User, AppError>;
 }
 
-impl UserService {
-    pub fn new(uow: Arc<dyn UnitOfWork>) -> Self {
+#[async_trait]
+impl<U> UserServiceApi for UserService<U>
+where
+    U: UnitOfWork + Send + Sync,
+    U::Tx: HasUserRepo + HasAuditRepo,
+{
+    async fn get_user(&self, uid: Uuid) -> Result<User, AppError> {
+        UserService::get_user(self, uid).await
+    }
+}
+
+pub struct UserService<U: UnitOfWork>
+where
+    U::Tx: HasUserRepo + HasAuditRepo,
+{
+    uow: Arc<U>,
+}
+
+impl<U: UnitOfWork> UserService<U>
+where
+    U::Tx: HasUserRepo + HasAuditRepo,
+{
+    pub fn new(uow: Arc<U>) -> Self {
         Self { uow }
     }
 
@@ -20,6 +46,7 @@ impl UserService {
         let user = tx.user().by_id(uid).await?;
         tx.audit().log(uid, "read_user").await?;
         tx.commit().await?;
+
         Ok(user)
     }
 }
