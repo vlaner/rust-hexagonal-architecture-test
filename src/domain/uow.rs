@@ -1,3 +1,5 @@
+use std::pin::Pin;
+
 use async_trait::async_trait;
 use thiserror::Error;
 
@@ -33,4 +35,19 @@ pub trait HasUserRepo {
 
 pub trait HasAuditRepo {
     fn audit(&mut self) -> Box<dyn AuditRepository + '_>;
+}
+
+// 🙃 TODO: how
+#[async_trait]
+pub trait UnitOfWorkCallback: Send + Sync {
+    type Tx: UnitOfWorkTransaction;
+
+    async fn execute<T, F>(&self, f: F) -> Result<T, UoWError>
+    where
+        T: Send + 'static,
+        F: for<'a> FnOnce(
+                &'a mut Self::Tx,
+            )
+                -> Pin<Box<dyn Future<Output = Result<T, UoWError>> + Send + 'a>>
+            + Send;
 }

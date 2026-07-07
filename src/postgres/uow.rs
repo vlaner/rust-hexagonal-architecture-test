@@ -1,8 +1,10 @@
+use std::pin::Pin;
+
 use anyhow::Context;
 use async_trait::async_trait;
 use sqlx::{PgPool, Postgres, Transaction};
 
-use crate::domain::uow::{UnitOfWork, UnitOfWorkTransaction, UoWError};
+use crate::domain::uow::{UnitOfWork, UnitOfWorkCallback, UnitOfWorkTransaction, UoWError};
 use crate::domain::users::UserRepository;
 use crate::domain::{
     audit::AuditRepository,
@@ -53,23 +55,77 @@ impl HasAuditRepo for PostgresUnitOfWorkTransaction {
 }
 
 #[async_trait]
-impl UnitOfWorkTransaction for PostgresUnitOfWorkTransaction {
-    async fn commit(self: Box<Self>) -> Result<(), UoWError> {
+impl UnitOfWorkCallback for PostgresUnitOfWork {
+    type Tx = PostgresUnitOfWorkTransaction;
+
+    async fn execute<'a, T, F>(&'a self, f: F) -> Result<T, UoWError>
+    where
+        T: Send + 'static,
+        F: for<'b> FnOnce(
+                &'b mut Self::Tx,
+            )
+                -> Pin<Box<dyn Future<Output = Result<T, UoWError>> + Send + 'b>>
+            + Send,
+    {
+        let tx = self
+            .pool
+            .begin()
+            .await
+            .context("begin unit of work")
+            .map_err(UoWError::Begin)?;
+
+        let mut tx_uow = PostgresUnitOfWorkTransaction { tx };
+        let result = f(&mut tx_uow).await;
+
+        match result {
+            Ok(value) => {
+                tx_uow
+                    .commit()
+                    .await
+                    .context("commit unit of work")
+                    .map_err(UoWError::Commit)?;
+
+                Ok(value)
+            }
+
+            Err(err) => {
+                tx_uow
+                    .rollback()
+                    .await
+                    .context("rollback unit of work")
+                    .map_err(UoWError::Rollback)?;
+
+                Err(err)
+            }
+        }
+    }
+}
+
+impl PostgresUnitOfWorkTransaction {
+    async fn commit(self) -> Result<(), UoWError> {
         self.tx
             .commit()
             .await
             .context("commit unit of work")
-            .map_err(UoWError::Commit)?;
-
-        Ok(())
+            .map_err(UoWError::Commit)
     }
 
-    async fn rollback(self: Box<Self>) -> Result<(), UoWError> {
+    async fn rollback(self) -> Result<(), UoWError> {
         self.tx
             .rollback()
             .await
             .context("rollback unit of work")
-            .map_err(UoWError::Rollback)?;
-        Ok(())
+            .map_err(UoWError::Rollback)
+    }
+}
+
+#[async_trait]
+impl UnitOfWorkTransaction for PostgresUnitOfWorkTransaction {
+    async fn commit(self: Box<Self>) -> Result<(), UoWError> {
+        self.commit().await
+    }
+
+    async fn rollback(self: Box<Self>) -> Result<(), UoWError> {
+        self.rollback().await
     }
 }

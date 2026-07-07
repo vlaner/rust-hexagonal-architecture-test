@@ -16,3 +16,8 @@ tracing = "0.1.44"
 tracing-actix-web = "0.7.22"
 tracing-subscriber = { version = "0.3.23", features = ["fmt", "env-filter"] }
 uuid = { version = "1.23.4", features = ["v4", "serde"] }
+
+[features]
+default = ["manual-uow"]
+callback-uow = []
+manual-uow = []

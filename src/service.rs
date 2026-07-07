@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::domain::uow::{UnitOfWork, UoWError};
+use crate::domain::uow::{UnitOfWork, UnitOfWorkCallback, UoWError};
 use crate::domain::users::{User, UserError};
 use crate::domain::{
     audit::AuditError,
@@ -48,6 +48,56 @@ where
         tx.commit().await?;
 
         Ok(user)
+    }
+}
+
+pub struct UserServiceCallback<U: UnitOfWorkCallback>
+where
+    U::Tx: HasUserRepo + HasAuditRepo,
+{
+    uow: Arc<U>,
+}
+
+#[async_trait]
+impl<U> UserServiceApi for UserServiceCallback<U>
+where
+    U: UnitOfWorkCallback + Send + Sync,
+    U::Tx: HasUserRepo + HasAuditRepo,
+{
+    async fn get_user(&self, uid: Uuid) -> Result<User, AppError> {
+        UserServiceCallback::get_user(self, uid).await
+    }
+}
+
+impl<U: UnitOfWorkCallback> UserServiceCallback<U>
+where
+    U::Tx: HasUserRepo + HasAuditRepo,
+{
+    pub fn new(uow: Arc<U>) -> Self {
+        Self { uow }
+    }
+
+    pub async fn get_user(&self, uid: Uuid) -> Result<User, AppError> {
+        self.uow
+            .execute(|repos| {
+                Box::pin(async move {
+                    let user = repos.user().by_id(uid).await?;
+                    repos.audit().log(uid, "read_user").await?;
+                    Ok(user)
+                })
+            })
+            .await
+            .map_err(|e| AppError::internal(e.into()))
+    }
+}
+impl From<UserError> for UoWError {
+    fn from(err: UserError) -> Self {
+        Self::Commit(err.into())
+    }
+}
+impl From<AuditError> for UoWError {
+    fn from(err: AuditError) -> Self {
+        Self::Commit(err.into())
     }
 }
 

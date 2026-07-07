@@ -1,5 +1,6 @@
 pub mod domain;
 pub mod error;
+pub mod features;
 pub mod postgres;
 pub mod service;
 
@@ -19,8 +20,6 @@ use tracing_actix_web::TracingLogger;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 use crate::error::{AppError, ErrorKind};
-use crate::postgres::uow::PostgresUnitOfWork;
-use crate::service::UserService;
 use crate::service::UserServiceApi;
 
 pub struct AppState {
@@ -98,8 +97,7 @@ pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
         .await
         .context("connect to postgres")?;
 
-    let uow = Arc::new(PostgresUnitOfWork::new(pool.clone()));
-    let user_service = Arc::new(UserService::new(uow));
+    let user_service = features::create_user_service(pool.clone());
     let app_state = web::Data::new(AppState { user_service });
 
     let server = HttpServer::new(move || {
