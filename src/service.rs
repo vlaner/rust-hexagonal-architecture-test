@@ -3,9 +3,9 @@ use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::domain::uow::{UnitOfWork, UnitOfWorkCallback, UoWError};
-use crate::domain::users::{User, UserError};
+use crate::domain::users::{User, UserError, UserRepository};
 use crate::domain::{
-    audit::AuditError,
+    audit::{AuditError, AuditRepository},
     uow::{HasAuditRepo, HasUserRepo, UnitOfWorkTransaction},
 };
 use crate::error::AppError;

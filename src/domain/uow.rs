@@ -20,24 +20,23 @@ pub enum UoWError {
 pub trait UnitOfWork: Send + Sync {
     type Tx: UnitOfWorkTransaction;
 
-    async fn begin(&self) -> Result<Box<Self::Tx>, UoWError>;
+    async fn begin(&self) -> Result<Self::Tx, UoWError>;
 }
 
 #[async_trait]
 pub trait UnitOfWorkTransaction: Send {
-    async fn commit(self: Box<Self>) -> Result<(), UoWError>;
-    async fn rollback(self: Box<Self>) -> Result<(), UoWError>;
+    async fn commit(self) -> Result<(), UoWError>;
+    async fn rollback(self) -> Result<(), UoWError>;
 }
 
 pub trait HasUserRepo {
-    fn user(&mut self) -> Box<dyn UserRepository + '_>;
+    fn user(&mut self) -> impl UserRepository + '_;
 }
 
 pub trait HasAuditRepo {
-    fn audit(&mut self) -> Box<dyn AuditRepository + '_>;
+    fn audit(&mut self) -> impl AuditRepository + '_;
 }
 
-// 🙃 TODO: how
 #[async_trait]
 pub trait UnitOfWorkCallback: Send + Sync {
     type Tx: UnitOfWorkTransaction;

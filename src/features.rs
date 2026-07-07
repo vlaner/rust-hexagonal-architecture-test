@@ -4,7 +4,10 @@ use sqlx::PgPool;
 
 use crate::postgres::uow::PostgresUnitOfWork;
 #[cfg(feature = "manual-uow")]
-use crate::service::{UserService, UserServiceApi, UserServiceCallback};
+use crate::service::UserService;
+use crate::service::UserServiceApi;
+#[cfg(feature = "callback-uow")]
+use crate::service::UserServiceCallback;
 
 pub fn create_user_service(pool: PgPool) -> Arc<dyn UserServiceApi> {
     create_user_service_impl(pool)
