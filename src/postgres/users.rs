@@ -1,8 +1,9 @@
-use crate::domain::users::{User, UserError, UserRepository};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use uuid::Uuid;
+
+use crate::domain::users::{User, UserError, UserRepository};
 
 pub struct PostgresUserRepoPool {
     pub pool: PgPool,
@@ -53,8 +54,10 @@ where
 
     match row {
         Ok(r) => Ok(r.to_domain()),
-        Err(sqlx::Error::RowNotFound) => Err(UserError::NotFound(id)),
-        Err(e) => Err(UserError::Unknown(e.into())),
+        Err(sqlx::Error::RowNotFound) => Err(UserError::NotFound),
+        Err(e) => Err(UserError::Unknown(
+            anyhow::Error::from(e).context("fetch user by id"),
+        )),
     }
 }
 

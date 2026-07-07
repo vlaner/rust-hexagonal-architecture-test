@@ -1,12 +1,17 @@
-use crate::domain::{audit::AuditRepository, users::UserRepository};
-use anyhow::Error as AnyhowError;
 use async_trait::async_trait;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+use crate::domain::audit::AuditRepository;
+use crate::domain::users::UserRepository;
+
+#[derive(Debug, Error)]
 pub enum UoWError {
-    #[error("unknown unit of work error")]
-    Unknown(#[from] AnyhowError),
+    #[error("failed to begin unit of work")]
+    Begin(#[source] anyhow::Error),
+    #[error("failed to commit unit of work")]
+    Commit(#[source] anyhow::Error),
+    #[error("failed to rollback unit of work")]
+    Rollback(#[source] anyhow::Error),
 }
 
 #[async_trait]

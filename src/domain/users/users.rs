@@ -1,8 +1,8 @@
-use anyhow::Error as AnyhowError;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use thiserror::Error;
 use uuid::Uuid;
+
+use crate::domain::users::UserError;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -10,16 +10,6 @@ pub struct User {
     pub username: String,
     pub password: String,
     pub created_at: DateTime<Utc>,
-}
-
-#[derive(Error, Debug)]
-pub enum UserError {
-    #[error("user with ID {0} not found")]
-    NotFound(Uuid),
-    #[error("username '{0}' already exists")]
-    DuplicateUsername(String),
-    #[error("unknown user error")]
-    Unknown(#[from] AnyhowError),
 }
 
 // TODO: possible to avoid mut?

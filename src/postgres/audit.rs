@@ -1,8 +1,9 @@
-use crate::domain::audit::{AuditError, AuditLog, AuditRepository};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use uuid::Uuid;
+
+use crate::domain::audit::{AuditError, AuditLog, AuditRepository};
 
 pub struct PostgresAuditRepositoryPool {
     pub pool: PgPool,
@@ -54,7 +55,9 @@ where
 
     match result {
         Ok(row) => Ok(row.to_domain()),
-        Err(e) => Err(AuditError::Unknown(e.into())),
+        Err(e) => Err(AuditError::Unknown(
+            anyhow::Error::from(e).context("insert audit log"),
+        )),
     }
 }
 

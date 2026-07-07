@@ -1,10 +1,12 @@
-use crate::domain::uow::{UnitOfWork, UnitOfWorkTransaction, UoWError};
-use crate::domain::{audit::AuditRepository, users::UserRepository};
-use crate::postgres::audit::PostgresAuditRepoTx;
-use crate::postgres::users::PostgresUserRepoTx;
 use anyhow::Context;
 use async_trait::async_trait;
 use sqlx::{PgPool, Postgres, Transaction};
+
+use crate::domain::audit::AuditRepository;
+use crate::domain::uow::{UnitOfWork, UnitOfWorkTransaction, UoWError};
+use crate::domain::users::UserRepository;
+use crate::postgres::audit::PostgresAuditRepoTx;
+use crate::postgres::users::PostgresUserRepoTx;
 
 pub struct PostgresUnitOfWork {
     pool: PgPool,
@@ -23,7 +25,8 @@ impl UnitOfWork for PostgresUnitOfWork {
             .pool
             .begin()
             .await
-            .context("begin postgres transaction")?;
+            .context("begin unit of work")
+            .map_err(UoWError::Begin)?;
         Ok(Box::new(PostgresUnitOfWorkTransaction { tx }))
     }
 }
@@ -46,7 +49,8 @@ impl UnitOfWorkTransaction for PostgresUnitOfWorkTransaction {
         self.tx
             .commit()
             .await
-            .context("commit postgres transaction")?;
+            .context("commit unit of work")
+            .map_err(UoWError::Commit)?;
         Ok(())
     }
 
@@ -54,7 +58,8 @@ impl UnitOfWorkTransaction for PostgresUnitOfWorkTransaction {
         self.tx
             .rollback()
             .await
-            .context("rollback postgres transaction")?;
+            .context("rollback unit of work")
+            .map_err(UoWError::Rollback)?;
         Ok(())
     }
 }
