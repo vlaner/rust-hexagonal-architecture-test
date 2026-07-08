@@ -6,10 +6,7 @@ pub mod shared;
 use std::net::TcpListener;
 use std::time::Duration;
 
-use actix_web::{
-    App, HttpServer, dev::Server,
-    web,
-};
+use actix_web::{App, HttpServer, dev::Server, web};
 use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
 use tracing_actix_web::TracingLogger;
