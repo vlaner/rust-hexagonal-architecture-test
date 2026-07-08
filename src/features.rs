@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use sqlx::PgPool;
 
-use crate::postgres::uow::PostgresUnitOfWork;
 #[cfg(feature = "manual-uow")]
-use crate::service::UserService;
-use crate::service::UserServiceApi;
+use crate::modules::auth::service::user::UserService;
+use crate::modules::auth::service::user::UserServiceApi;
 #[cfg(feature = "callback-uow")]
-use crate::service::UserServiceCallback;
+use crate::modules::auth::service::user::UserServiceCallback;
+use crate::shared::postgres::uow::PostgresUnitOfWork;
 
 pub fn create_user_service(pool: PgPool) -> Arc<dyn UserServiceApi> {
     create_user_service_impl(pool)

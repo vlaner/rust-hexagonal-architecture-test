@@ -1,85 +1,21 @@
-pub mod domain;
-pub mod error;
+pub mod contracts;
 pub mod features;
-pub mod postgres;
-pub mod service;
+pub mod modules;
+pub mod shared;
 
 use std::net::TcpListener;
-use std::sync::Arc;
 use std::time::Duration;
 
 use actix_web::{
-    App, HttpResponse, HttpServer, Responder, dev::Server, error::ResponseError, http::StatusCode,
+    App, HttpServer, dev::Server,
     web,
 };
 use anyhow::Context;
-use chrono::{DateTime, Utc};
-use serde::Serialize;
 use sqlx::postgres::PgPoolOptions;
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
-use crate::error::{AppError, ErrorKind};
-use crate::service::UserServiceApi;
-
-pub struct AppState {
-    pub user_service: Arc<dyn UserServiceApi>,
-}
-
-#[derive(Serialize)]
-struct ErrorResponse {
-    error: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    fields: Vec<crate::error::FieldError>,
-}
-
-impl ResponseError for AppError {
-    fn status_code(&self) -> StatusCode {
-        match self.kind {
-            ErrorKind::NotFound => StatusCode::NOT_FOUND,
-            ErrorKind::Conflict => StatusCode::CONFLICT,
-            ErrorKind::Validation => StatusCode::UNPROCESSABLE_ENTITY,
-            ErrorKind::Unauthorized => StatusCode::UNAUTHORIZED,
-            ErrorKind::Forbidden => StatusCode::FORBIDDEN,
-            ErrorKind::Internal => StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    }
-
-    fn error_response(&self) -> HttpResponse {
-        HttpResponse::build(self.status_code()).json(ErrorResponse {
-            error: self
-                .message
-                .unwrap_or(self.kind.public_message())
-                .to_string(),
-            fields: self.fields.clone(),
-        })
-    }
-}
-
-#[derive(serde::Deserialize)]
-struct UidParam {
-    uid: uuid::Uuid,
-}
-
-#[derive(serde::Serialize)]
-struct UserResponse {
-    id: uuid::Uuid,
-    username: String,
-    created_at: DateTime<Utc>,
-}
-
-async fn index(
-    state: web::Data<AppState>,
-    query: web::Query<UidParam>,
-) -> Result<impl Responder, AppError> {
-    let user = state.user_service.get_user(query.uid).await?;
-
-    Ok(web::Json(UserResponse {
-        id: user.id,
-        username: user.username,
-        created_at: user.created_at,
-    }))
-}
+use crate::{modules::auth::http::index, shared::app_state::AppState};
 
 pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
     tracing_subscriber::fmt()

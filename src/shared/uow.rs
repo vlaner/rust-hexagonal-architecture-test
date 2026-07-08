@@ -3,9 +3,6 @@ use std::pin::Pin;
 use async_trait::async_trait;
 use thiserror::Error;
 
-use crate::domain::audit::AuditRepository;
-use crate::domain::users::UserRepository;
-
 #[derive(Debug, Error)]
 pub enum UoWError {
     #[error("failed to begin unit of work")]
@@ -27,14 +24,6 @@ pub trait UnitOfWork: Send + Sync {
 pub trait UnitOfWorkTransaction: Send {
     async fn commit(self) -> Result<(), UoWError>;
     async fn rollback(self) -> Result<(), UoWError>;
-}
-
-pub trait HasUserRepo {
-    fn user(&mut self) -> impl UserRepository + '_;
-}
-
-pub trait HasAuditRepo {
-    fn audit(&mut self) -> impl AuditRepository + '_;
 }
 
 // 🙃 TODO: how

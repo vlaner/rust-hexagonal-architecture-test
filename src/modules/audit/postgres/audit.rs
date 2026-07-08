@@ -3,7 +3,10 @@ use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::domain::audit::{AuditError, AuditLog, AuditRepository};
+use crate::contracts::audit::{
+    audit::{AuditLog, AuditRepository},
+    error::AuditError,
+};
 
 pub struct PostgresAuditRepositoryPool {
     pub pool: PgPool,

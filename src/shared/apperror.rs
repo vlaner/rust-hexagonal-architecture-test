@@ -1,7 +1,5 @@
 use std::fmt;
 
-use serde::Serialize;
-
 #[derive(Debug, Clone, Copy)]
 pub enum ErrorKind {
     NotFound,
@@ -25,7 +23,7 @@ impl ErrorKind {
     }
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct FieldError {
     pub field: String,
     pub message: String,

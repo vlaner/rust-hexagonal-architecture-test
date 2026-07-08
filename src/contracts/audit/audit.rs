@@ -3,7 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::domain::audit::AuditError;
+use crate::contracts::audit::error::AuditError;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AuditLog {

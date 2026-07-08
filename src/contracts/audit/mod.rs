@@ -1,3 +1,3 @@
 pub mod audit;
+pub mod error;
 pub mod uow;
-pub mod users;

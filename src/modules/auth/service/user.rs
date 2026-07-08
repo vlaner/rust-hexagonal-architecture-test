@@ -1,14 +1,21 @@
 use async_trait::async_trait;
-use std::{pin::Pin, sync::Arc};
+use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::domain::uow::{UnitOfWork, UnitOfWorkCallback, UoWError};
-use crate::domain::users::{User, UserError, UserRepository};
-use crate::domain::{
-    audit::{AuditError, AuditRepository},
-    uow::{HasAuditRepo, HasUserRepo, UnitOfWorkTransaction},
+use crate::shared::{apperror::AppError, uow::UnitOfWork};
+use crate::{
+    contracts::audit::audit::AuditRepository,
+    modules::auth::domain::user::user::UserRepository,
+    shared::uow::{UnitOfWorkCallback, UnitOfWorkTransaction},
 };
-use crate::error::AppError;
+use crate::{
+    contracts::audit::{error::AuditError, uow::HasAuditRepo},
+    modules::auth::{
+        domain::user::{error::UserError, user::User},
+        uow::types::HasUserRepo,
+    },
+    shared::uow::UoWError,
+};
 
 #[async_trait]
 pub trait UserServiceApi: Send + Sync {

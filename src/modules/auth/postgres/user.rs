@@ -3,7 +3,8 @@ use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::domain::users::{User, UserError, UserRepository};
+use crate::modules::auth::domain::user::error::UserError;
+use crate::modules::auth::domain::user::user::{User, UserRepository};
 
 pub struct PostgresUserRepoPool {
     pub pool: PgPool,
