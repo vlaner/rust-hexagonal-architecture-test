@@ -56,13 +56,13 @@ impl HasAuditRepo for PostgresUnitOfWorkTransaction {
 impl UnitOfWorkCallback for PostgresUnitOfWork {
     type Tx = PostgresUnitOfWorkTransaction;
 
-    async fn execute<'a, T, F>(&'a self, f: F) -> Result<T, UoWError>
+    async fn execute<'a, T, F, E>(&'a self, f: F) -> Result<T, E>
     where
         T: Send + 'static,
+        E: From<UoWError> + Send + 'static,
         F: for<'b> FnOnce(
                 &'b mut Self::Tx,
-            )
-                -> Pin<Box<dyn Future<Output = Result<T, UoWError>> + Send + 'b>>
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'b>>
             + Send,
     {
         let tx = self
@@ -87,11 +87,9 @@ impl UnitOfWorkCallback for PostgresUnitOfWork {
             }
 
             Err(err) => {
-                tx_uow
-                    .rollback()
-                    .await
-                    .context("rollback unit of work")
-                    .map_err(UoWError::Rollback)?;
+                if let Err(rollback_err) = tx_uow.rollback().await {
+                    tracing::error!(error = ?rollback_err, "rollback failed");
+                }
 
                 Err(err)
             }

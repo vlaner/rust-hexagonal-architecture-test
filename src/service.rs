@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use std::sync::Arc;
+use std::{pin::Pin, sync::Arc};
 use uuid::Uuid;
 
 use crate::domain::uow::{UnitOfWork, UnitOfWorkCallback, UoWError};
@@ -87,17 +87,6 @@ where
                 })
             })
             .await
-            .map_err(|e| AppError::internal(e.into()))
-    }
-}
-impl From<UserError> for UoWError {
-    fn from(err: UserError) -> Self {
-        Self::Commit(err.into())
-    }
-}
-impl From<AuditError> for UoWError {
-    fn from(err: AuditError) -> Self {
-        Self::Commit(err.into())
     }
 }
 

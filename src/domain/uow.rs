@@ -42,12 +42,12 @@ pub trait HasAuditRepo {
 pub trait UnitOfWorkCallback: Send + Sync {
     type Tx: UnitOfWorkTransaction;
 
-    async fn execute<T, F>(&self, f: F) -> Result<T, UoWError>
+    async fn execute<T, F, E>(&self, f: F) -> Result<T, E>
     where
         T: Send + 'static,
+        E: From<UoWError> + Send + 'static,
         F: for<'a> FnOnce(
                 &'a mut Self::Tx,
-            )
-                -> Pin<Box<dyn Future<Output = Result<T, UoWError>> + Send + 'a>>
+            ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'a>>
             + Send;
 }
