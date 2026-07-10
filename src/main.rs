@@ -3,11 +3,12 @@ use std::net::TcpListener;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let address = "127.0.0.1:8080";
-    let listener = TcpListener::bind(address)?;
+    let config = rust_backend::config::load()?;
+    let address = config.bind_address();
+    let listener = TcpListener::bind(&address)?;
     println!("Server running on http://{}", address);
 
-    rust_backend::run(listener).await?.await?;
+    rust_backend::run(listener, config).await?.await?;
 
     Ok(())
 }

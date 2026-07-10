@@ -1,9 +1,9 @@
+pub mod config;
 pub mod features;
 pub mod modules;
 pub mod shared;
 
-use std::time::Duration;
-use std::{net::TcpListener, sync::Arc};
+use std::{net::TcpListener, sync::Arc, time::Duration};
 
 use crate::shared::postgres::uow::PostgresUnitOfWork;
 use actix_web::{App, HttpServer, dev::Server, web};
@@ -14,7 +14,7 @@ use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
 use crate::modules::auth::core::http::{AppState, index};
 
-pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
+pub async fn run(listener: TcpListener, config: config::Config) -> anyhow::Result<Server> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| {
             "rust_backend=debug,actix_web=info,tracing_actix_web=debug,sqlx=debug".into()
@@ -22,11 +22,10 @@ pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
         .with_span_events(FmtSpan::CLOSE)
         .init();
 
-    let database_url = std::env::var("DATABASE_URL").context("DATABASE_URL is required")?;
     let pool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_secs(3))
         .acquire_slow_threshold(Duration::from_secs(2))
-        .connect(&database_url)
+        .connect(config.database_url())
         .await
         .context("connect to postgres")?;
 
