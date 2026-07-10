@@ -1,12 +1,17 @@
+use crate::modules::audit::core::domain::audit::AuditRepository;
 use crate::{
     modules::{
-        audit::core::postgres::audit::PostgresAuditRepoTx,
-        auth::{
-            api::{AuditPort, HasAuditPort},
-            core::{HasUserRepo, UserRepository, postgres::user::PostgresUserRepoTx},
+        audit::{
+            api::AuditApi,
+            core::postgres::audit::PostgresAuditRepoTx,
+        },
+        auth::core::{
+            HasUserRepo, UserRepository,
+            audit_port::{AuditPort, HasAuditPort},
+            postgres::user::PostgresUserRepoTx,
         },
     },
-    shared::postgres::uow::PostgresUnitOfWorkTransaction,
+    shared::{apperror::AppError, postgres::uow::PostgresUnitOfWorkTransaction},
 };
 
 impl HasUserRepo for PostgresUnitOfWorkTransaction {
@@ -15,8 +20,23 @@ impl HasUserRepo for PostgresUnitOfWorkTransaction {
     }
 }
 
+struct AuthAuditPort<'a, 'c> {
+    audit: PostgresAuditRepoTx<'a, 'c>,
+}
+
+#[async_trait::async_trait]
+impl AuditPort for AuthAuditPort<'_, '_> {
+    async fn log(&mut self, user_id: uuid::Uuid, action: &str) -> Result<(), AppError> {
+        let _ = self.audit.log(user_id, action).await?;
+        Ok(())
+    }
+}
+
+// adapt user defined audit port to audit transaction boundary
 impl HasAuditPort for PostgresUnitOfWorkTransaction {
     fn audit(&mut self) -> impl AuditPort + '_ {
-        PostgresAuditRepoTx::new(&mut self.tx)
+        AuthAuditPort {
+            audit: PostgresAuditRepoTx::new(&mut self.tx),
+        }
     }
 }

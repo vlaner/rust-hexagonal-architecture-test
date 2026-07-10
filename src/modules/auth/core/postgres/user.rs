@@ -5,18 +5,18 @@ use uuid::Uuid;
 
 use crate::modules::auth::core::domain::user::{User, UserRepository, error::UserError};
 
-pub struct PostgresUserRepoTx<'a> {
-    pub tx: &'a mut Transaction<'static, Postgres>,
+pub struct PostgresUserRepoTx<'a, 'c> {
+    pub tx: &'a mut Transaction<'c, Postgres>,
 }
 
-impl<'a> PostgresUserRepoTx<'a> {
-    pub fn new(tx: &'a mut Transaction<'static, Postgres>) -> Self {
+impl<'a, 'c> PostgresUserRepoTx<'a, 'c> {
+    pub fn new(tx: &'a mut Transaction<'c, Postgres>) -> Self {
         Self { tx }
     }
 }
 
 #[async_trait]
-impl<'a> UserRepository for PostgresUserRepoTx<'a> {
+impl UserRepository for PostgresUserRepoTx<'_, '_> {
     async fn by_id(&mut self, id: Uuid) -> Result<User, UserError> {
         by_id(&mut **self.tx, id).await
     }

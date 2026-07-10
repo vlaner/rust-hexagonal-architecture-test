@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    modules::auth::api::{AuditPort, HasAuditPort, User, UserServiceApi},
+    modules::auth::{
+        api::{User, UserServiceApi},
+        core::audit_port::{AuditPort, HasAuditPort},
+    },
     shared::{
         apperror::AppError,
         uow::{UnitOfWork, UnitOfWorkCallback, UnitOfWorkTransaction},

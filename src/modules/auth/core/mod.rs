@@ -1,3 +1,4 @@
+pub mod audit_port;
 mod domain;
 pub mod http;
 pub mod postgres;
@@ -6,12 +7,13 @@ mod uow;
 
 use std::sync::Arc;
 
-use super::api::{HasAuditPort, UserServiceApi};
+use self::audit_port::HasAuditPort;
+use super::api::UserServiceApi;
 use crate::shared::uow::{UnitOfWork, UnitOfWorkCallback};
 
 use self::service::user::{UserService, UserServiceCallback};
 
-pub use super::api::{AuditPort, AuditPortError};
+pub use audit_port::AuditPort;
 pub use domain::user::UserRepository;
 pub use uow::types::HasUserRepo;
 

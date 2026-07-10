@@ -1,11 +1,9 @@
-use crate::modules::auth::api::{AuditPort, AuditPortError};
-use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use sqlx::{Executor, PgPool, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::modules::audit::core::domain::audit::{AuditLog, AuditRepository};
+use crate::modules::audit::core::domain::audit::{AuditError, AuditLog, AuditRepository};
 
 pub struct PostgresAuditRepositoryPool {
     pool: PgPool,
@@ -19,53 +17,47 @@ impl PostgresAuditRepositoryPool {
 
 #[async_trait]
 impl AuditRepository for PostgresAuditRepositoryPool {
-    async fn log(&mut self, user_id: Uuid, action: &str) -> Result<AuditLog, anyhow::Error> {
+    async fn log(&mut self, user_id: Uuid, action: &str) -> Result<AuditLog, AuditError> {
         log(&self.pool, user_id, action).await
     }
 }
 
-pub struct PostgresAuditRepoTx<'a> {
-    tx: &'a mut Transaction<'static, Postgres>,
+pub struct PostgresAuditRepoTx<'a, 'c> {
+    pub tx: &'a mut Transaction<'c, Postgres>,
 }
 
-impl<'a> PostgresAuditRepoTx<'a> {
-    pub fn new(tx: &'a mut Transaction<'static, Postgres>) -> Self {
+impl<'a, 'c> PostgresAuditRepoTx<'a, 'c> {
+    pub fn new(tx: &'a mut Transaction<'c, Postgres>) -> Self {
         Self { tx }
     }
 }
 
 #[async_trait]
-impl AuditRepository for PostgresAuditRepoTx<'_> {
-    async fn log(&mut self, user_id: Uuid, action: &str) -> Result<AuditLog, anyhow::Error> {
+impl AuditRepository for PostgresAuditRepoTx<'_, '_> {
+    async fn log(&mut self, user_id: Uuid, action: &str) -> Result<AuditLog, AuditError> {
         log(&mut **self.tx, user_id, action).await
     }
 }
 
-#[async_trait]
-impl AuditPort for PostgresAuditRepoTx<'_> {
-    async fn log(&mut self, user_id: Uuid, action: &str) -> Result<(), AuditPortError> {
-        log(&mut **self.tx, user_id, action)
-            .await
-            .map(|_| ())
-            .map_err(AuditPortError)
-    }
-}
-
-async fn log<'e, E>(executor: E, user_id: Uuid, action: &str) -> Result<AuditLog, anyhow::Error>
+async fn log<'e, E>(executor: E, user_id: Uuid, action: &str) -> Result<AuditLog, AuditError>
 where
     E: Executor<'e, Database = Postgres>,
 {
-    let row = sqlx::query_as!(
+    let result = sqlx::query_as!(
         AuditLogRow,
         "INSERT INTO audit_log (user_id, action) VALUES ($1, $2) RETURNING id, user_id, action, timestamp",
         user_id,
         action
     )
     .fetch_one(executor)
-    .await
-    .context("insert audit log")?;
+    .await;
 
-    Ok(row.into_domain())
+    match result {
+        Ok(row) => Ok(row.to_domain()),
+        Err(error) => Err(AuditError::Unknown(
+            anyhow::Error::from(error).context("insert audit log"),
+        )),
+    }
 }
 
 #[derive(Debug)]
@@ -77,7 +69,7 @@ struct AuditLogRow {
 }
 
 impl AuditLogRow {
-    fn into_domain(self) -> AuditLog {
+    fn to_domain(self) -> AuditLog {
         AuditLog {
             id: self.id,
             user_id: self.user_id,
