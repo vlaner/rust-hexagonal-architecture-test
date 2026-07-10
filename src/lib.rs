@@ -1,4 +1,3 @@
-pub mod compose;
 pub mod features;
 pub mod modules;
 pub mod shared;
