@@ -1,11 +1,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use uuid::Uuid;
 
-use crate::contracts::audit::error::AuditError;
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Clone)]
 pub struct AuditLog {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -13,9 +11,13 @@ pub struct AuditLog {
     pub timestamp: DateTime<Utc>,
 }
 
-// TODO: possible to avoid mut?
-// sql transaction requires &mut, pool does not
+#[derive(Debug, Error)]
+pub enum AuditError {
+    #[error("unexpected audit error")]
+    Unknown(#[from] anyhow::Error),
+}
+
 #[async_trait]
-pub trait AuditRepository: Send + Sync {
+pub trait AuditApi: Send + Sync {
     async fn log(&mut self, user_id: Uuid, action: &str) -> Result<AuditLog, AuditError>;
 }

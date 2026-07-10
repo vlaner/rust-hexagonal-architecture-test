@@ -15,6 +15,7 @@ impl PostgresUnitOfWork {
         Self { pool }
     }
 }
+
 pub struct PostgresUnitOfWorkTransaction {
     pub tx: Transaction<'static, Postgres>,
 }

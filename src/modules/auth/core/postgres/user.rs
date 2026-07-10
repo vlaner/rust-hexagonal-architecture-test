@@ -1,27 +1,9 @@
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
-use sqlx::{Executor, PgPool, Postgres, Transaction};
+use sqlx::{Executor, Postgres, Transaction};
 use uuid::Uuid;
 
-use crate::modules::auth::domain::user::error::UserError;
-use crate::modules::auth::domain::user::user::{User, UserRepository};
-
-pub struct PostgresUserRepoPool {
-    pub pool: PgPool,
-}
-
-impl PostgresUserRepoPool {
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
-    }
-}
-
-#[async_trait]
-impl UserRepository for PostgresUserRepoPool {
-    async fn by_id(&mut self, id: Uuid) -> Result<User, UserError> {
-        by_id(&self.pool, id).await
-    }
-}
+use crate::modules::auth::core::domain::user::{User, UserRepository, error::UserError};
 
 pub struct PostgresUserRepoTx<'a> {
     pub tx: &'a mut Transaction<'static, Postgres>,
@@ -54,7 +36,7 @@ where
     .await;
 
     match row {
-        Ok(r) => Ok(r.to_domain()),
+        Ok(r) => Ok(r.into_domain()),
         Err(sqlx::Error::RowNotFound) => Err(UserError::NotFound),
         Err(e) => Err(UserError::Unknown(
             anyhow::Error::from(e).context("fetch user by id"),
@@ -71,7 +53,7 @@ pub struct UserRow {
 }
 
 impl UserRow {
-    pub fn to_domain(self) -> User {
+    pub fn into_domain(self) -> User {
         User {
             id: self.id,
             username: self.username,

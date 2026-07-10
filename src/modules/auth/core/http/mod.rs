@@ -1,7 +1,13 @@
+use std::sync::Arc;
+
+use crate::modules::auth::api::UserServiceApi;
+use crate::shared::apperror::AppError;
 use actix_web::{Responder, web};
 use chrono::{DateTime, Utc};
 
-use crate::shared::{app_state::AppState, apperror::AppError};
+pub struct AppState {
+    pub user_service: Arc<dyn UserServiceApi>,
+}
 
 #[derive(serde::Deserialize)]
 pub struct UidParam {

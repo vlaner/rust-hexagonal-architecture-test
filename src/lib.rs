@@ -1,18 +1,19 @@
-pub mod contracts;
+pub mod compose;
 pub mod features;
 pub mod modules;
 pub mod shared;
 
-use std::net::TcpListener;
 use std::time::Duration;
+use std::{net::TcpListener, sync::Arc};
 
+use crate::shared::postgres::uow::PostgresUnitOfWork;
 use actix_web::{App, HttpServer, dev::Server, web};
 use anyhow::Context;
 use sqlx::postgres::PgPoolOptions;
 use tracing_actix_web::TracingLogger;
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
-use crate::{modules::auth::http::index, shared::app_state::AppState};
+use crate::modules::auth::core::http::{AppState, index};
 
 pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
     tracing_subscriber::fmt()
@@ -30,7 +31,8 @@ pub async fn run(listener: TcpListener) -> anyhow::Result<Server> {
         .await
         .context("connect to postgres")?;
 
-    let user_service = features::create_user_service(pool.clone());
+    let uow = Arc::new(PostgresUnitOfWork::new(pool));
+    let user_service = features::create_user_service_impl(uow);
     let app_state = web::Data::new(AppState { user_service });
 
     let server = HttpServer::new(move || {

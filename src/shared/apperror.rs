@@ -103,6 +103,16 @@ impl fmt::Display for AppError {
     }
 }
 
+impl From<crate::shared::uow::UoWError> for AppError {
+    fn from(error: crate::shared::uow::UoWError) -> Self {
+        match error {
+            crate::shared::uow::UoWError::Begin(cause)
+            | crate::shared::uow::UoWError::Commit(cause)
+            | crate::shared::uow::UoWError::Rollback(cause) => Self::internal(cause),
+        }
+    }
+}
+
 impl fmt::Debug for AppError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // transform chain of errors using colons (like golang wraps)
