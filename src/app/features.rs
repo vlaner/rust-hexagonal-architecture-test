@@ -1,3 +1,5 @@
+mod auth_audit_local;
+
 use std::sync::Arc;
 
 use crate::{

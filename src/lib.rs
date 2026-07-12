@@ -1,5 +1,5 @@
+pub mod app;
 pub mod config;
-pub mod features;
 pub mod modules;
 pub mod shared;
 
@@ -30,7 +30,7 @@ pub async fn run(listener: TcpListener, config: config::Config) -> anyhow::Resul
         .context("connect to postgres")?;
 
     let uow = Arc::new(PostgresUnitOfWork::new(pool));
-    let user_service = features::create_user_service_impl(uow);
+    let user_service = app::features::create_user_service_impl(uow);
     let app_state = web::Data::new(AppState { user_service });
 
     let server = HttpServer::new(move || {
