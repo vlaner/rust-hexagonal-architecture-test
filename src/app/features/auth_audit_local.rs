@@ -1,6 +1,9 @@
 use crate::{
     modules::{
-        audit::core::{domain::audit::AuditRepository, postgres::audit::PostgresAuditRepoTx},
+        audit::{
+            api::AuditApi,
+            core::{postgres::audit::PostgresAuditRepoTx, service::audit::AuditService},
+        },
         auth::core::{
             HasUserRepo, UserRepository,
             audit_port::{AuditPort, HasAuditPort},
@@ -17,7 +20,7 @@ impl HasUserRepo for PostgresUnitOfWorkTransaction {
 }
 
 struct AuthAuditPort<'a, 'c> {
-    audit: PostgresAuditRepoTx<'a, 'c>,
+    audit: AuditService<PostgresAuditRepoTx<'a, 'c>>,
 }
 
 #[async_trait::async_trait]
@@ -30,8 +33,9 @@ impl AuditPort for AuthAuditPort<'_, '_> {
 
 impl HasAuditPort for PostgresUnitOfWorkTransaction {
     fn audit(&mut self) -> impl AuditPort + '_ {
-        AuthAuditPort {
-            audit: PostgresAuditRepoTx::new(&mut self.tx),
-        }
+        let repository = PostgresAuditRepoTx::new(&mut self.tx);
+        let audit = AuditService::new(repository);
+
+        AuthAuditPort { audit }
     }
 }
